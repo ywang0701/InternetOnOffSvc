@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
-using System.ServiceProcess;
-using System.Text;
 using System.Timers;
+using System.ServiceProcess;
+using InternetOnOffSvc;
 
 namespace InternetOnOffSvc
 {
@@ -21,8 +16,21 @@ namespace InternetOnOffSvc
 
         protected override void OnStart(string[] args)
         {
+            int tickTimer = 5;
             timer1 = new Timer();
-            this.timer1.Interval = 30000; // every 3 sec
+            string filecontent = Library.readFile(AppDomain.CurrentDomain.BaseDirectory + "_tick.txt");
+            if (filecontent == "")
+            {
+                Library.WriteErrorLog("Scheduler On Start: Reading from turnInternetOnOff (arguments) " + tickTimer);
+                Library.WriteErrorLog("Scheduler On Start: TickTimer definition file:  " + AppDomain.CurrentDomain.BaseDirectory + "_tick.txt");
+            }
+            else
+            {
+                Library.WriteErrorLog("turnInternetOnOff: URL is defined in " + AppDomain.CurrentDomain.BaseDirectory + "_tick.txt: " + Int32.Parse(filecontent));
+                tickTimer = Int32.Parse(filecontent);
+            }
+
+            this.timer1.Interval = tickTimer * 1000; // every 5 sec
             this.timer1.Elapsed += new System.Timers.ElapsedEventHandler(this.timer1_Tick);
             timer1.Enabled = true;
             Library.WriteErrorLog("InternetOnOff window service started");
@@ -30,8 +38,10 @@ namespace InternetOnOffSvc
 
         private void timer1_Tick(object sender, ElapsedEventArgs e)
         {
+
             Library.turnInternetOnOff();
-            Library.WriteErrorLog("check http://www.taascloud.com/treeview/data" + "/user/tc.txt");
+            Library.WriteErrorLog("");
+            Library.WriteErrorLog("timer1_Tick");
         }
         protected override void OnStop()
         {
@@ -39,5 +49,7 @@ namespace InternetOnOffSvc
             Library.WriteErrorLog("InternetOnOff service stopped");
 
         }
+
+   
     }
 }

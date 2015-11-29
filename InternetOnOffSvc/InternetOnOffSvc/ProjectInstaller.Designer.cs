@@ -28,31 +28,33 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.serviceProcessInstaller1 = new System.ServiceProcess.ServiceProcessInstaller();
+            this.InternetOnOff = new System.ServiceProcess.ServiceProcessInstaller();
             this.InternetOnOffSvc = new System.ServiceProcess.ServiceInstaller();
             // 
-            // serviceProcessInstaller1
+            // InternetOnOff
             // 
-            this.serviceProcessInstaller1.Account = System.ServiceProcess.ServiceAccount.LocalSystem;
-            this.serviceProcessInstaller1.Password = null;
-            this.serviceProcessInstaller1.Username = null;
+            this.InternetOnOff.Account = System.ServiceProcess.ServiceAccount.LocalSystem;
+            this.InternetOnOff.Password = null;
+            this.InternetOnOff.Username = null;
             // 
             // InternetOnOffSvc
             // 
+            this.InternetOnOffSvc.DelayedAutoStart = true;
             this.InternetOnOffSvc.DisplayName = "InternetOnOffSvc";
             this.InternetOnOffSvc.ServiceName = "InternetOnOffSvc";
+            this.InternetOnOffSvc.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
             // 
             // ProjectInstaller
             // 
             this.Installers.AddRange(new System.Configuration.Install.Installer[] {
-            this.serviceProcessInstaller1,
+            this.InternetOnOff,
             this.InternetOnOffSvc});
 
         }
 
         #endregion
 
-        private System.ServiceProcess.ServiceProcessInstaller serviceProcessInstaller1;
+        private System.ServiceProcess.ServiceProcessInstaller InternetOnOff;
         private System.ServiceProcess.ServiceInstaller InternetOnOffSvc;
     }
 }
