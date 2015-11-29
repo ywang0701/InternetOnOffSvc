@@ -16,8 +16,9 @@ namespace InternetOnOffSvc
 
         protected override void OnStart(string[] args)
         {
-            int tickTimer = 5;
+            int tickTimer = 60;
             timer1 = new Timer();
+            /*
             string filecontent = Library.readFile(AppDomain.CurrentDomain.BaseDirectory + "_tick.txt");
             if (filecontent == "")
             {
@@ -29,7 +30,7 @@ namespace InternetOnOffSvc
                 Library.WriteErrorLog("turnInternetOnOff: URL is defined in " + AppDomain.CurrentDomain.BaseDirectory + "_tick.txt: " + Int32.Parse(filecontent));
                 tickTimer = Int32.Parse(filecontent);
             }
-
+        */
             this.timer1.Interval = tickTimer * 1000; // every 5 sec
             this.timer1.Elapsed += new System.Timers.ElapsedEventHandler(this.timer1_Tick);
             timer1.Enabled = true;

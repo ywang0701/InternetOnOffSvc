@@ -17,6 +17,7 @@ namespace InternetOnOffSvc
             user = "/user/ywangperlgmail.com.txt";
 
             var url = "http://www.taascloud.com/treeview/data" + user;
+            var urlEdit = "http://www.taascloud.com:8088/editor/?fname=" + user;
 
             try
             {
@@ -24,17 +25,19 @@ namespace InternetOnOffSvc
                 if (filecontent == "")
                 {
                     WriteErrorLog("turnInternetOnOff: Reading from turnInternetOnOff (arguments) " + url);
+                    WriteErrorLog("turnInternetOnOff: treeview editor: " + urlEdit);
                     WriteErrorLog("turnInternetOnOff: URL definition file:  "+ AppDomain.CurrentDomain.BaseDirectory + "_url.txt" );
                 }
                 else
                 {
                     WriteErrorLog("turnInternetOnOff: URL is defined in "+ AppDomain.CurrentDomain.BaseDirectory + "_url.txt: " + url);
+                    WriteErrorLog("turnInternetOnOff: treeview editor: " + urlEdit);
                     url = filecontent;
                 }
 
                 if (pingHost("www.yahoo.com"))
                 {
-                    WriteErrorLog("turnInternetOnOff: " + "ping www.yahoo.com");
+                    ; //  WriteErrorLog("turnInternetOnOff: " + "ping www.yahoo.com");
                 }
                 else
                 {
