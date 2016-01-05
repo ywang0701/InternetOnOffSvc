@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Net.NetworkInformation;
+using System.Collections.Generic;
 
 
 
@@ -58,7 +59,23 @@ namespace InternetOnOffSvc
                         WriteErrorLog("startBlocking time: " + startTime + " FinishBlockTime: " + finishTime); 
                         Time4BlockingInternet(startTime, finishTime);
                     }
+
+                    List<String> list = new List<String>();
+
+                    list.Add("127.0.0.1 www.abc.com");
+                    list.Add("127.0.0.1 www.abd.com");
+                    list.Add("127.0.0.1 www.abe.com");
+                    list.Add("127.0.0.1 www.abf.com");
+                    list.Add("127.0.0.1 www.abg.com");
+
+
+                    updateHostsFile(list);
+
+
+
+
                 }
+
             }
             catch (Exception ex)
             {
@@ -199,6 +216,60 @@ namespace InternetOnOffSvc
             }
             return filecontent;
         }
+
+        static public void updateHostsFile(List<String> list)
+        {
+
+            string fname = @"C:\Windows\System32\drivers\etc\hosts";
+            // using (StreamWriter writetext = new StreamWriter(@"C:\Windows\System32\drivers\etc\hosts"))
+            // using (StreamWriter writetext = new StreamWriter(@"c:\write.txt"))
+            using (StreamWriter writetext = new StreamWriter(fname))
+            {
+                string str1 = @"
+# Copyright (c) 1993-2009 Microsoft Corp.
+#
+# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.
+#
+# This file contains the mappings of IP addresses to host names. Each
+# entry should be kept on an individual line. The IP address should
+# be placed in the first column followed by the corresponding host name.
+# The IP address and the host name should be separated by at least one
+# space.
+#
+# Additionally, comments (such as these) may be inserted on individual
+# lines or following the machine name denoted by a '#' symbol.
+#
+# For example:
+#
+#      102.54.94.97     rhino.acme.com          # source server
+#       38.25.63.10     x.acme.com              # x client host
+
+# localhost name resolution is handled within DNS itself.
+#	127.0.0.1       localhost
+#	::1             localhost
+
+# test
+
+0.0.0.1	mssplus.mcafee.com
+
+
+";
+                writetext.WriteLine(str1);
+            }
+
+            foreach (string str in list)
+            {
+                using (StreamWriter sw = File.AppendText(fname))
+                {
+                    sw.WriteLine(str);
+                    Console.WriteLine(str);
+                }
+
+            }
+
+
+        }
+
 
     }
 }
