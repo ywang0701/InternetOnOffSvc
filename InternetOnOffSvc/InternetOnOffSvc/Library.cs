@@ -12,7 +12,7 @@ namespace InternetOnOffSvc
 {
     public static class Library
     {
-    public static void turnInternetOnOff()
+        public static void turnInternetOnOff()
         {
             var user = "/user/ywangperl@gmail.com";
             user = "/user/ywangperlgmail.com.txt";
@@ -23,15 +23,16 @@ namespace InternetOnOffSvc
             try
             {
                 string filecontent = readFile(AppDomain.CurrentDomain.BaseDirectory + "_url.txt");
-                if (filecontent == "")
+                if (filecontent == "") // use default url
+                {
+                    WriteErrorLog("turnInternetOnOff: use default " + url);
+                    WriteErrorLog("turnInternetOnOff: treeview editor: " + urlEdit);
+                    WriteErrorLog("turnInternetOnOff: URL definition file:  " + AppDomain.CurrentDomain.BaseDirectory + "_url.txt");
+                }
+                else // Read url from local file "_url.txt" 
                 {
                     WriteErrorLog("turnInternetOnOff: Reading from turnInternetOnOff (arguments) " + url);
-                    WriteErrorLog("turnInternetOnOff: treeview editor: " + urlEdit);
-                    WriteErrorLog("turnInternetOnOff: URL definition file:  "+ AppDomain.CurrentDomain.BaseDirectory + "_url.txt" );
-                }
-                else
-                {
-                    WriteErrorLog("turnInternetOnOff: URL is defined in "+ AppDomain.CurrentDomain.BaseDirectory + "_url.txt: " + url);
+                    WriteErrorLog("turnInternetOnOff: URL is defined in " + AppDomain.CurrentDomain.BaseDirectory + "_url.txt: " + url);
                     WriteErrorLog("turnInternetOnOff: treeview editor: " + urlEdit);
                     url = filecontent;
                 }
@@ -45,35 +46,48 @@ namespace InternetOnOffSvc
                     ipconfig("/renew");
                     WriteErrorLog("turnInternetOnOff: config /renew");
                 }
+
                 var textFromFile = (new WebClient()).DownloadString(url);
+                List<String> urls = new List<String>();
+                bool blockInternet = false;
                 string[] lines = textFromFile.Split('\n');
                 foreach (string line in lines)
                 {
                     RegexOptions options = RegexOptions.IgnoreCase;
-                    Regex r1 = new Regex(@"^\s*Internet\s*blocking\s*:\s*\s*startTime\s*=\s*(.+)finishTime\s*=\s*(.+)\s*$", options);
+                    Regex r1 = new Regex(@"^\s*(\S+)\s*(\S+)\s*:\s*\s*startTime\s*=\s*(.+)finishTime\s*=\s*(.+)\s*$", options);
+                    Regex rWWW = new Regex(@"www\.", options);
+                    Regex rCOM = new Regex(@".com", options);
                     Match match = r1.Match(line);
                     if (match.Success)
                     {
-                        var startTime = match.Groups[1].Value;
-                        var finishTime = match.Groups[2].Value;
-                        WriteErrorLog("startBlocking time: " + startTime + " FinishBlockTime: " + finishTime); 
-                        Time4BlockingInternet(startTime, finishTime);
+                        var url_block = match.Groups[1].Value;
+                        var permission = match.Groups[2].Value;
+                        var startTime = match.Groups[3].Value;
+                        var finishTime = match.Groups[4].Value;
+                        if (Time4Blocking(startTime, finishTime))
+                        {
+                            if (url_block.Equals("internet", StringComparison.OrdinalIgnoreCase)) { blockInternet = true; }
+                            else
+                            {
+                                Match matchWWW = rWWW.Match(url_block);
+                                Match matchCOM = rCOM.Match(url_block);
+                                // if (matchWWW.Success) { ;} else { url_block = "www." + url_block; }
+                                if (matchCOM.Success) { ;} else { url_block = url_block + ".com"; }
+                                urls.Add("127.0.0.1 " + url_block);
+                            }
+                            WriteErrorLog("startBlocking time: " + startTime + " FinishBlockTime: " + finishTime + " " + permission + "   " + url_block);
+                        }
                     }
-
-                    List<String> list = new List<String>();
-
-                    list.Add("127.0.0.1 www.abc.com");
-                    list.Add("127.0.0.1 www.abd.com");
-                    list.Add("127.0.0.1 www.abe.com");
-                    list.Add("127.0.0.1 www.abf.com");
-                    list.Add("127.0.0.1 www.abg.com");
-
-
-                    updateHostsFile(list);
-
-
-
-
+                }
+                if (blockInternet)
+                {
+                    WriteErrorLog("turnInternetOnOff: Turn Off Internet");
+                    WriteErrorLog("turnInternetOnOff: ipconfig /release");
+                    ipconfig("/release");
+                }
+                else
+                {
+                    updateHostsFile(urls);
                 }
 
             }
@@ -85,27 +99,6 @@ namespace InternetOnOffSvc
             {
                 ; // Console.WriteLine("turnInternetOnOff is executed");
             }
-        }
-        private static bool timeIsRight(string startTimeStr, string finishTimeStr)
-        {
-
-            DateTime startTime = DateTime.Parse(startTimeStr);
-            DateTime finishTime = DateTime.Parse(finishTimeStr);
-            DateTime currentTime = DateTime.Now;
-
-            if ((DateTime.Compare(startTime, currentTime) <= 0) && (DateTime.Compare(currentTime, finishTime) <= 0))
-            {
-                WriteErrorLog("timeIsRight: Turn Off Internet");
-                WriteErrorLog("timeIsRight: ipconfig /release");
-                ipconfig("/release");
-            }
-            else
-            {
-                // Console.WriteLine("Turn On Internet");
-                // ipconfig("/renew");
-            }
-
-            return true;
         }
         private static bool pingHost(string nameOrAddress)
         {
@@ -123,7 +116,7 @@ namespace InternetOnOffSvc
             }
             return pingable;
         }
-        private static bool Time4BlockingInternet(string startTimeStr, string finishTimeStr)
+        private static bool Time4Blocking(string startTimeStr, string finishTimeStr)
         {
 
             DateTime startTime = DateTime.Parse(startTimeStr);
@@ -132,18 +125,13 @@ namespace InternetOnOffSvc
 
             if ((DateTime.Compare(startTime, currentTime) <= 0) && (DateTime.Compare(currentTime, finishTime) <= 0))
             {
-                // Console.WriteLine("Turn Off Internet");
-                WriteErrorLog("Time4BlockingInternet: Turn Off Internet");
-                WriteErrorLog("Time4BlockingInternet: ipconfig /release");
-                ipconfig("/release");
-
+                return true;
             }
             else
             {
-                WriteErrorLog("Time4BlockingInternet: Turn On Internet");
+                return false;
             }
 
-            return true;
         }
         private static void ipconfig(string args)
         {
@@ -157,7 +145,7 @@ namespace InternetOnOffSvc
                 myProcess.StartInfo.Arguments = args;
                 myProcess.Start();
                 string output = myProcess.StandardOutput.ReadToEnd();
-                WriteErrorLog("ipconfig: ......" );
+                WriteErrorLog("ipconfig: ......");
                 // WriteErrorLog("ipconfig: " + output);
             }
             catch (Exception e)
@@ -216,7 +204,6 @@ namespace InternetOnOffSvc
             }
             return filecontent;
         }
-
         static public void updateHostsFile(List<String> list)
         {
 
@@ -248,11 +235,7 @@ namespace InternetOnOffSvc
 #	127.0.0.1       localhost
 #	::1             localhost
 
-# test
-
 0.0.0.1	mssplus.mcafee.com
-
-
 ";
                 writetext.WriteLine(str1);
             }
@@ -269,8 +252,6 @@ namespace InternetOnOffSvc
 
 
         }
-
-
     }
 }
 
