@@ -12,60 +12,100 @@ namespace InternetOnOffSvc
 {
     public static class Library
     {
-        public static void turnInternetOnOff()
+        public static void turnInternetOnOff( )
         {
-            var user = "/user/ywangperl@gmail.com";
-            user = "/user/ywangperlgmail.com.txt";
 
-            var url = "http://www.taascloud.com/treeview/data" + user;
+            var hostUrl = @"http://online.okwebsolution.com"; var username = @"a";
+            // http://online.okwebsolution.com/account/a/schedule.txt
+
+            var url = hostUrl + @"/account/" + username + @"/schedule.txt";
+
+
+            /*
+            var user = "/user/ywangperlgmail.com.txt";
             var urlEdit = "http://www.taascloud.com:8088/editor/?fname=" + user;
+            */
+
+            /*
+                        var user = "/user/ywangperl@gmail.com";
+                        user = "/user/ywangperlgmail.com.txt";
+                        var url = "http://www.taascloud.com/treeview/data" + user;
+                        var urlEdit = "http://www.taascloud.com:8088/editor/?fname=" + user;
+                        var url = "http://www.taascloud.com/treeview/data" + user;
+            */
+
 
             try
             {
                 string filecontent = readFile(AppDomain.CurrentDomain.BaseDirectory + "_url.txt");
-                if (filecontent == "") // use default url
+                if ((filecontent == "") || (filecontent.Contains(@"#")))  // use default url
                 {
                     WriteErrorLog("turnInternetOnOff: use default " + url);
-                    WriteErrorLog("turnInternetOnOff: treeview editor: " + urlEdit);
+                    // WriteErrorLog("turnInternetOnOff: treeview editor: " + urlEdit);
                     WriteErrorLog("turnInternetOnOff: URL definition file:  " + AppDomain.CurrentDomain.BaseDirectory + "_url.txt");
                 }
                 else // Read url from local file "_url.txt" 
                 {
+                    url = filecontent;
                     WriteErrorLog("turnInternetOnOff: Reading from turnInternetOnOff (arguments) " + url);
                     WriteErrorLog("turnInternetOnOff: URL is defined in " + AppDomain.CurrentDomain.BaseDirectory + "_url.txt: " + url);
-                    WriteErrorLog("turnInternetOnOff: treeview editor: " + urlEdit);
-                    url = filecontent;
+                    WriteErrorLog("turnInternetOnOff: URL is " + url);
                 }
 
                 if (pingHost("www.yahoo.com"))
                 {
-                    ; //  WriteErrorLog("turnInternetOnOff: " + "ping www.yahoo.com");
+                    WriteErrorLog("turnInternetOnOff: " + "ping www.yahoo.com for intenet connectivity");
                 }
                 else
                 {
                     ipconfig("/renew");
-                    WriteErrorLog("turnInternetOnOff: config /renew");
+                    WriteErrorLog("turnInternetOnOff: config /renew to reconnect the internet");
                 }
 
                 var textFromFile = (new WebClient()).DownloadString(url);
+                    WriteErrorLog("turnInternetOnOff: get url    = " + url);
+                    WriteErrorLog("turnInternetOnOff: url content= " + textFromFile);
+
                 List<String> urls = new List<String>();
                 bool blockInternet = false;
+
                 string[] lines = textFromFile.Split('\n');
+
                 foreach (string line in lines)
                 {
                     RegexOptions options = RegexOptions.IgnoreCase;
-                    Regex r1 = new Regex(@"^\s*(\S+)\s*(\S+)\s*:\s*\s*startTime\s*=\s*(.+)finishTime\s*=\s*(.+)\s*$", options);
+                    // Regex r1 = new Regex(@"^\s*(\S+)\s*(\S+)\s*:\s*\s*startTime\s*=\s*(.+)finishTime\s*=\s*(.+)\s*$", options);
+                    Regex r1 = new Regex(@"^\s*\d+\|(.+)\|(.+)\|(.+)\|(.+)\r", options);
+                    Regex r2 = new Regex(@"^\s*(\S+)\s+(\S+)", options);
                     Regex rWWW = new Regex(@"www\.", options);
                     Regex rCOM = new Regex(@".com", options);
+
+                    WriteErrorLog("turnInternetOnOff: line= " + line);
                     Match match = r1.Match(line);
-                    if (match.Success)
+                    if (match.Success)          // Match the block internet|yahoo|desc|startTime|finishTime format
                     {
                         var url_block = match.Groups[1].Value;
-                        var permission = match.Groups[2].Value;
+                        var description = match.Groups[2].Value;
+                        var permission = description;
                         var startTime = match.Groups[3].Value;
                         var finishTime = match.Groups[4].Value;
-                        if (Time4Blocking(startTime, finishTime))
+
+                    WriteErrorLog("turnInternetOnOff: format match = " + line);
+                        Match match2 = r2.Match(url_block); // Match the (block) (yahoo) from the title
+                        if (match2.Success)
                         {
+                            ;
+                            url_block = match2.Groups[2].Value;
+                            permission = match2.Groups[1].Value;
+                        }
+                        else
+                        {
+                            continue; // The title is not in the block internet format
+                        }
+
+                        if (Time4Blocking(startTime, finishTime))   // Build the block site list 
+                        {
+                    WriteErrorLog("turnInternetOnOff: time match = " + line);
                             if (url_block.Equals("internet", StringComparison.OrdinalIgnoreCase)) { blockInternet = true; }
                             else
                             {
@@ -76,6 +116,14 @@ namespace InternetOnOffSvc
                                 urls.Add("127.0.0.1 " + url_block);
                             }
                             WriteErrorLog("startBlocking time: " + startTime + " FinishBlockTime: " + finishTime + " " + permission + "   " + url_block);
+
+                            foreach (string str in urls)
+                            {
+                                {
+                                    WriteErrorLog("startBlocking time: " + startTime + " FinishBlockTime: " + finishTime + " blick: " + str);
+                                }
+
+                            }
                         }
                     }
                 }
@@ -195,6 +243,11 @@ namespace InternetOnOffSvc
                 }
                 else
                 {
+                    StreamWriter sw = null;
+                    sw = new StreamWriter(fname, true);
+                    sw.WriteLine(@"#http://online.okwebsolution.com/account/a/schedule.txt");
+                    sw.Flush();
+                    sw.Close();
                     filecontent = "";
                 }
             }
