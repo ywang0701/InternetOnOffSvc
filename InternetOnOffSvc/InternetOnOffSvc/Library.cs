@@ -14,9 +14,11 @@ namespace InternetOnOffSvc
         {
 
             var hostUrl = @"http://online.okwebsolution.com"; var username = @"a";
-            hostUrl = @"http://www.tafcloud.com"; username = "ywang";
+            hostUrl = @"http://www.tafcloud.com"; username = "ldanghotmail";
 
             var url = hostUrl + @"/account/" + username + @"/schedule.txt";                 // http://online.okwebsolution.com/account/a/schedule.txt
+
+                    WriteErrorLog("turnInternetOnOff: use default " + url);
 
             try
             {
@@ -68,17 +70,34 @@ namespace InternetOnOffSvc
                 foreach (string line in lines)
                 {
                     RegexOptions options = RegexOptions.IgnoreCase;
+                    Regex r0 = new Regex(@"^\s*(\d+)\|(.+)\|\|(.+)\|(.+)", options);    // parse id, permission url, desc, time missing the desc case
                     // Regex r1 = new Regex(@"^\s*(\S+)\s*(\S+)\s*:\s*\s*startTime\s*=\s*(.+)finishTime\s*=\s*(.+)\s*$", options);
-                    Regex r1 = new Regex(@"^\s*\d+\|(.+)\|(.+)\|(.+)\|(.+)\r", options);
-                    Regex r2 = new Regex(@"^\s*(\S+)\s+(\S+)", options);
-                    Regex rWWW = new Regex(@"www\.", options);
-                    Regex rCOM = new Regex(@".com", options);
+                    Regex r1 = new Regex(@"^\s*\d+\|(.+)\|(.+)\|(.+)\|(.+)\r", options);    // parse id, permission url, desc, time
+                    Regex r2 = new Regex(@"^\s*(\S+)\s+(\S+)", options);                    // parse     permission url`
+                    Regex rWWW = new Regex(@"www\.", options);                              // remove www.
+                    Regex rCOM = new Regex(@".com", options);                               // remove .com
+                    string line_withDesc = line; 
 
 #if DEBUG
                     WriteErrorLog("turnInternetOnOff: line= " + line);
 #endif
+                    
+                    /// Fix missing desc case 
+                    Match match0 = r0.Match(line);
+                    if (match0.Success)          // Match the 75|block www.yahoo.com||2016-03-10 12:29|2016-03-10 14:29      # missing the desc
+                    {
+                        var id = match0.Groups[0].Value;      // block internet
+                        var url_block = match0.Groups[1].Value;      // block internet
+                        var description = match0.Groups[2].Value;    // yahoo
+                        var permission = description;               // 
+                        var startTime = match0.Groups[3].Value;
+                        var finishTime = match0.Groups[4].Value;
 
-                    Match match = r1.Match(line);
+                        line_withDesc = match0.Groups[1] + "|" + match0.Groups[2] + "|desc" + "|" + match0.Groups[3] + "|" + match0.Groups[4];
+
+                    }
+
+                    Match match = r1.Match(line_withDesc);
                     if (match.Success)          // Match the 75|block www.yahoo.com|block www.yahoo.com |2016-03-10 12:29|2016-03-10 14:29
                     //                       1               1                  2            3        4         
                     {
@@ -107,7 +126,9 @@ namespace InternetOnOffSvc
 #if DEBUG
                             WriteErrorLog("turnInternetOnOff: time match = " + line);
 #endif     
-                            if (url_block.Equals("internet", StringComparison.OrdinalIgnoreCase)) { blockInternet = true; }
+                            // if (url_block.Equals("internet", StringComparison.OrdinalIgnoreCase)) { blockInternet = true; }
+                            if ((permission.Equals("block", StringComparison.OrdinalIgnoreCase )) && (url_block.Equals("internet", StringComparison.OrdinalIgnoreCase))) { blockInternet = true; }
+                            else if ((permission.Equals("unblock", StringComparison.OrdinalIgnoreCase )) && (url_block.Equals("internet", StringComparison.OrdinalIgnoreCase))) { blockInternet = false; }
                             else
                             {
                                 Match matchWWW = rWWW.Match(url_block);
@@ -140,6 +161,16 @@ namespace InternetOnOffSvc
                     WriteErrorLog("turnInternetOnOff: ipconfig /release");
 #endif     
                     ipconfig("/release");
+                }
+                else if (blockInternet == false)
+                {
+#if DEBUG
+                    WriteErrorLog("turnInternetOnOff: Turn on Internet");
+                    WriteErrorLog("turnInternetOnOff: By ipconfig(\"renew\")");
+                    List<String> urls_null = new List<String>();
+                    updateHostsFile(urls_null);
+#endif     
+
                 }
                 else
                 {
